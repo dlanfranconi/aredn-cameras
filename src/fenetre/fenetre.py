@@ -13,7 +13,6 @@ from datetime import datetime, timedelta
 from functools import partial
 from threading import Thread
 from typing import Callable, Dict, List, Optional, Tuple
-import cv2
 import subprocess
 import tempfile
 
