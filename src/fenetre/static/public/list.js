@@ -517,7 +517,7 @@ function updateCamera(camera, cameraData) {
                 lastPictureTime.textContent = `Last picture: ${imageDate.toLocaleString()}`;
                 const isOnline = (new Date() - imageDate) < 3 * 60 * 1000;
                 status.className = `status ${isOnline ? 'online' : 'offline'}`;
-                updateHeaderStatus();
+                updateHeaderStatus(cameraData);
             } else {
                 lastPictureTime.textContent = 'Could not parse date from: ' + filename;
                 status.className = 'status offline';
@@ -617,6 +617,11 @@ function updateCamera(camera, cameraData) {
 let initialCameraExpanded = false;
 
 function updateHeaderStatus(data) {
+
+    if (!data || !data.cameras) {
+        console.warn("Camera metadata not ready");
+        return;
+    }
 
     const header = document.querySelector('#camera-title');
     if (!header) return;
