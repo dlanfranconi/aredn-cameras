@@ -8,6 +8,8 @@ import threading
 from io import TextIOWrapper
 from typing import Optional
 import shutil
+import requests
+import yaml
 
 from PIL import Image
 
@@ -15,6 +17,57 @@ from fenetre.admin_server import metric_timelapse_queue_size
 from fenetre.platform_utils import is_raspberry_pi
 
 logger = logging.getLogger(__name__)
+def capture_rtsp_snapshot(rtsp_url: str, output_path: str) -> bool:
+    """
+    Capture a single frame from an RTSP stream using ffmpeg.
+    """
+    try:
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-rtsp_transport",
+            "tcp",
+            "-i",
+            rtsp_url,
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
+            output_path,
+        ]
+
+        subprocess.run(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+        )
+
+        return os.path.exists(output_path) and os.path.getsize(output_path) > 0
+
+    except Exception as e:
+        logger.error(f"RTSP snapshot failed for {rtsp_url}: {e}")
+        return False
+def capture_snapshot(camera_url: str, output_path: str) -> bool:
+    """
+    Capture snapshot from HTTP or RTSP camera.
+    """
+    try:
+        if camera_url.lower().startswith("rtsp://"):
+            return capture_rtsp_snapshot(camera_url, output_path)
+
+        r = requests.get(camera_url, timeout=10)
+        if r.status_code == 200:
+            with open(output_path, "wb") as f:
+                f.write(r.content)
+            return True
+
+    except Exception as e:
+        logger.error(f"Snapshot failed for {camera_url}: {e}")
+
+    return False
+
+
 def timelapse_enabled_for_camera(camera_name: str) -> bool:
     """
     Reads config.yaml and determines if timelapse generation is enabled
