@@ -636,6 +636,24 @@ function updateHeaderStatus() {
         🕒 Updated ${timeString}`;
 }
 
+function loadTimelapseStats() {
+    fetch('/api/timelapse_stats')
+        .then(res => res.json())
+        .then(stats => {
+
+            const bytes = stats.total_size_bytes;
+            const files = stats.file_count;
+
+            const gb = (bytes / (1024 * 1024 * 1024)).toFixed(1);
+
+            const header = document.querySelector('#list-header h1');
+
+            header.innerHTML +=
+                `<br>💾 ${gb} GB Timelapse Storage &nbsp;&nbsp; 🎞 ${files} Timelapses`;
+        })
+        .catch(err => console.error("Failed to load timelapse stats", err));
+}
+
 
 
 function updateAllCameras() {
@@ -737,3 +755,4 @@ function updateAllCameras() {
 
 updateAllCameras();
 setInterval(updateAllCameras, 60000); // Refresh every 60 seconds
+loadTimelapseStats();
