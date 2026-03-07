@@ -645,19 +645,21 @@ function updateHeaderStatus(data) {
 
 async function loadTimelapseStats() {
     try {
-        const response = await fetch("http://192.168.10.40:8888/api/timelapse_stats");
-        const data = await response.json();
+        const res = await fetch("http://192.168.10.40:8889/api/timelapse_stats");
+        const data = await res.json();
 
-        const gb = (data.total_size_bytes / (1024*1024*1024)).toFixed(1);
+        const gb = (data.total_size_bytes / (1024**3)).toFixed(1);
         const files = data.file_count;
 
+        const header = document.getElementById("header");
         header.innerHTML +=
             `<br>💾 ${gb} GB Timelapse Storage &nbsp;&nbsp; 🎞 ${files} Timelapses`;
-
-    } catch (err) {
+    }
+    catch (err) {
         console.error("Failed to load timelapse stats", err);
     }
 }
+
 
 
 
