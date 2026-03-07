@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 from functools import partial
 from threading import Thread
 from typing import Callable, Dict, List, Optional, Tuple
+import cv2
+
 
 import mozjpeg_lossless_optimization
 import pytz
@@ -170,7 +172,6 @@ def log_camera_error(camera_name: str, error_message: str, global_config: Dict):
     )
     camera_logger.error(error_message)
 
-
 def get_pic_from_url(
     url: str,
     timeout: int,
@@ -185,6 +186,33 @@ def get_pic_from_url(
     if global_config is None:
         global_config = {}
 
+    # -------------------------
+    # RTSP STREAM SUPPORT
+    # -------------------------
+    if url.lower().startswith("rtsp://"):
+
+        logger.debug(f"Capturing RTSP frame from {url}")
+
+        cap = cv2.VideoCapture(url)
+
+        if not cap.isOpened():
+            raise RuntimeError(f"Failed to open RTSP stream: {url}")
+
+        ret, frame = cap.read()
+        cap.release()
+
+        if not ret:
+            raise RuntimeError(f"Failed to read frame from RTSP stream: {url}")
+
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(frame_rgb)
+
+        return img
+
+    # -------------------------
+    # NORMAL HTTP SNAPSHOT
+    # -------------------------
+
     request_url = url
     if camera_config.get("cache_bust", False):
         timestamp = int(time.time())
@@ -197,6 +225,7 @@ def get_pic_from_url(
     if ua:
         requests_version = requests.__version__
         headers = {"User-Agent": f"{ua} v{requests_version}"}
+
     r = requests.get(request_url, timeout=timeout, headers=headers)
 
     log_message = (
@@ -223,13 +252,11 @@ def get_pic_from_url(
         raise RuntimeError(
             f"HTTP Request Failed!\n"
             f"URL: {request_url}\n"
-            f"Status Code: {r.status_code}\n"
-            f"Request Headers: {r.request.headers}\n"
-            f"Response Headers: {r.headers}\n"
-            f"Response Content (first 500 bytes): {r.content[:500]}"
+            f"Status Code: {r.status_code}"
         )
 
     return Image.open(BytesIO(r.content))
+
 
 
 def get_pic_dir_and_filename(camera_name: str) -> Tuple[str, str]:
