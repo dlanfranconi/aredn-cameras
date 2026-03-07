@@ -5,7 +5,7 @@ FROM ubuntu:latest
 
 # Install required system packages (ffmpeg)
 RUN apt-get update && \
-    apt-get install -y python3-venv ffmpeg
+    apt-get install -y python3-venv ffmpeg ibgl1 libglib2.0-0
 
 # For Intel only
 RUN apt-get install -y intel-media-va-driver-non-free intel-opencl-icd libmfx1
