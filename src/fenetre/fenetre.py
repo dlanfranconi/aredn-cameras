@@ -246,15 +246,15 @@ def get_pic_from_url(
     # -------------------------
    if url.lower().startswith("rtsp://"):
 
-    cache_file = start_rtsp_frame_grabber(camera_name, url)
-
-    # wait briefly for first frame
-    for _ in range(10):
-        if os.path.exists(cache_file) and os.path.getsize(cache_file) > 0:
-            return Image.open(cache_file)
-        time.sleep(0.2)
-
-    raise RuntimeError(f"RTSP frame not yet available for {camera_name}")
+        cache_file = start_rtsp_frame_grabber(camera_name, url)
+    
+        # wait briefly for first frame
+        for _ in range(10):
+            if os.path.exists(cache_file) and os.path.getsize(cache_file) > 0:
+                return Image.open(cache_file)
+            time.sleep(0.2)
+    
+        raise RuntimeError(f"RTSP frame not yet available for {camera_name}")
 
 
     # -------------------------
