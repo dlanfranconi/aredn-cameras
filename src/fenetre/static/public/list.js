@@ -622,7 +622,11 @@ function updateAllCameras() {
             return response.json();
         })
         .then(data => {
-            document.querySelector('#list-header h1').textContent = data.global.deployment_name + ' cameras';
+            cconst cameraCount = data.cameras.length;
+            const deploymentName = data.global.deployment_name || "SLO County AREDN";
+            document.querySelector('#list-header h1').textContent =
+                deploymentName + " Cameras (" + cameraCount + ")";
+
 
             // --- Icon Links Logic ---
             const mainWebsiteLink = document.getElementById('main-website-link');
