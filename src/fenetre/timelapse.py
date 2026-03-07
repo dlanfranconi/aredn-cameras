@@ -15,6 +15,30 @@ from fenetre.admin_server import metric_timelapse_queue_size
 from fenetre.platform_utils import is_raspberry_pi
 
 logger = logging.getLogger(__name__)
+def timelapse_enabled_for_camera(camera_name: str) -> bool:
+    """
+    Reads config.yaml and determines if timelapse generation is enabled
+    for the given camera.
+    """
+    try:
+        config_path = "/etc/fenetre/config.yaml"
+
+        if not os.path.exists(config_path):
+            return True
+
+        import yaml
+
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        for cam in config.get("cameras", []):
+            if cam.get("title") == camera_name:
+                return cam.get("generate_timelapse", True)
+
+    except Exception as e:
+        logger.warning(f"Could not read timelapse config: {e}")
+
+    return True
 
 
 def get_image_dimensions(image_path: str):
@@ -40,6 +64,16 @@ def create_timelapse(
     log_max_bytes: int = 10000000,
     log_backup_count: int = 5,
 ) -> bool:
+
+    # Determine camera name from directory
+    camera_name = os.path.basename(os.path.dirname(dir))
+    
+    # Check config.yaml to see if timelapse is enabled
+    if not timelapse_enabled_for_camera(camera_name):
+        logger.info(f"Timelapse disabled for camera: {camera_name}")
+        return False
+
+    
     if not os.path.exists(dir):
         raise FileNotFoundError(dir)
 
@@ -360,6 +394,11 @@ def add_to_timelapse_queue(
             f.seek(0)  # Go to the beginning to read the content
             lines = f.readlines()
             daydir_stripped = daydir.strip()
+            camera_name = os.path.basename(os.path.dirname(daydir_stripped))
+            if not timelapse_enabled_for_camera(camera_name):
+                logger.info(f"Skipping queue for disabled timelapse camera: {camera_name}")
+                return
+
             # Check if daydir is already in the queue
             for line in lines:
                 if daydir_stripped == line.strip():
