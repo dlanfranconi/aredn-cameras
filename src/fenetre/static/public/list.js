@@ -643,32 +643,22 @@ function updateHeaderStatus(data) {
 }
 
 
-function loadTimelapseStats() {
+async function loadTimelapseStats() {
+    try {
+        const response = await fetch("http://192.168.10.40:8888/api/timelapse_stats");
+        const data = await response.json();
 
-    fetch('/api/timelapse_stats')
-        .then(res => {
-            if (!res.ok) return null;
-            return res.json();
-        })
-        .then(stats => {
+        const gb = (data.total_size_bytes / (1024*1024*1024)).toFixed(1);
+        const files = data.file_count;
 
-            if (!stats) return;
+        header.innerHTML +=
+            `<br>💾 ${gb} GB Timelapse Storage &nbsp;&nbsp; 🎞 ${files} Timelapses`;
 
-            const bytes = stats.total_size_bytes;
-            const files = stats.file_count;
-
-            const gb = (bytes / (1024*1024*1024)).toFixed(1);
-
-            const header = document.querySelector('#camera-title');
-
-            if (header) {
-                header.innerHTML +=
-                    `<br>\uD83D\uDCBE ${gb} GB Timelapse Storage • \uD83C\uDF9E ${files} Timelapses`;
-            }
-
-        })
-        .catch(() => {});
+    } catch (err) {
+        console.error("Failed to load timelapse stats", err);
+    }
 }
+
 
 
 
