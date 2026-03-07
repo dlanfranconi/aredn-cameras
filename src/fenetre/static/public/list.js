@@ -656,14 +656,17 @@ async function loadTimelapseStats() {
         const gb = (data.total_size_bytes / (1024**3)).toFixed(1);
         const files = data.file_count;
 
-        const header = document.getElementById("header");
+        const header = document.querySelector('#list-header h1');
+        if (!header) return;
+
         header.innerHTML +=
-            `<br>💾 ${gb} GB Timelapse Storage &nbsp;&nbsp; 🎞 ${files} Timelapses`;
+            `<br>💾 ${gb} GB Timelapse Storage • 🎞 ${files} Timelapses`;
     }
     catch (err) {
         console.error("Failed to load timelapse stats", err);
     }
 }
+
 
 
 
