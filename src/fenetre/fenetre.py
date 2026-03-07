@@ -14,7 +14,8 @@ from functools import partial
 from threading import Thread
 from typing import Callable, Dict, List, Optional, Tuple
 import cv2
-
+import subprocess
+import tempfile
 
 import mozjpeg_lossless_optimization
 import pytz
@@ -87,6 +88,9 @@ from io import BytesIO
 import json
 import numpy as np
 from waitress import serve as waitress_serve
+
+RTSP_CACHE_DIR = "/tmp/fenetre_rtsp_cache"
+os.makedirs(RTSP_CACHE_DIR, exist_ok=True)
 
 
 logger = logging.getLogger(__name__)
@@ -172,6 +176,57 @@ def log_camera_error(camera_name: str, error_message: str, global_config: Dict):
     )
     camera_logger.error(error_message)
 
+def start_rtsp_frame_grabber(camera_name: str, url: str):
+    """
+    Start a persistent ffmpeg process that always writes the newest frame
+    to a cache file.
+    """
+
+    safe_name = camera_name.replace(" ", "_")
+    output_file = os.path.join(RTSP_CACHE_DIR, f"{safe_name}.jpg")
+
+    if os.path.exists(output_file):
+        return output_file
+
+    cmd = [
+        "ffmpeg",
+        "-rtsp_transport", "tcp",
+        "-fflags", "nobuffer",
+        "-flags", "low_delay",
+        "-probesize", "32",
+        "-analyzeduration", "0",
+        "-i", url,
+        "-vf", "fps=1",
+        "-q:v", "2",
+        "-update", "1",
+        "-y",
+        output_file
+    ]
+
+    pid_file = os.path.join(RTSP_CACHE_DIR, f"{safe_name}.pid")
+
+    if os.path.exists(pid_file):
+        return output_file
+    
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+    
+    with open(pid_file, "w") as f:
+        f.write(str(proc.pid))
+
+    
+    subprocess.Popen(
+        cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+    return output_file
+
+
 def get_pic_from_url(
     url: str,
     timeout: int,
@@ -187,27 +242,20 @@ def get_pic_from_url(
         global_config = {}
 
     # -------------------------
-    # RTSP STREAM SUPPORT
+    # RTSP STREAM SUPPORT (FFMPEG)
     # -------------------------
-    if url.lower().startswith("rtsp://"):
+   if url.lower().startswith("rtsp://"):
 
-        logger.debug(f"Capturing RTSP frame from {url}")
+    cache_file = start_rtsp_frame_grabber(camera_name, url)
 
-        cap = cv2.VideoCapture(url)
+    # wait briefly for first frame
+    for _ in range(10):
+        if os.path.exists(cache_file) and os.path.getsize(cache_file) > 0:
+            return Image.open(cache_file)
+        time.sleep(0.2)
 
-        if not cap.isOpened():
-            raise RuntimeError(f"Failed to open RTSP stream: {url}")
+    raise RuntimeError(f"RTSP frame not yet available for {camera_name}")
 
-        ret, frame = cap.read()
-        cap.release()
-
-        if not ret:
-            raise RuntimeError(f"Failed to read frame from RTSP stream: {url}")
-
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(frame_rgb)
-
-        return img
 
     # -------------------------
     # NORMAL HTTP SNAPSHOT
