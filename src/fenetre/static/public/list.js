@@ -625,7 +625,8 @@ function updateHeaderStatus() {
     const header = document.querySelector('#list-header h1');
     const deployment = header.dataset.name || header.textContent;
 
-    header.textContent = `${deployment} (${total}) • ${online} Online • ${offline} Offline`;
+    header.innerHTML = `${deployment} (${total}) &bull; ${online} Online &bull; ${offline} Offline`;
+
 }
 
 
