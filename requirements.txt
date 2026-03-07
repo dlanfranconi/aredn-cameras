@@ -5,6 +5,7 @@ absl-py
 logzero
 numpy
 cairosvg
+flask-cors
 # python-daemon
 
 ## Optional
