@@ -632,7 +632,7 @@ function updateAllCameras() {
             
             document.querySelector('#list-header h1').textContent =
                 data.global.deployment_name + " Cameras (" + cameraCount + ")";
-        });
+
 
 
             // --- Icon Links Logic ---
