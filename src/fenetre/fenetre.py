@@ -244,7 +244,7 @@ def get_pic_from_url(
     # -------------------------
     # RTSP STREAM SUPPORT (FFMPEG)
     # -------------------------
-   if url.lower().startswith("rtsp://"):
+    if url.lower().startswith("rtsp://"):
 
         cache_file = start_rtsp_frame_grabber(camera_name, url)
     
