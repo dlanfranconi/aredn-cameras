@@ -545,7 +545,22 @@ function updateCamera(camera, cameraData) {
             linkTimelapse.href = `${photo_dir}/${yesterdayStr}/${yesterdayStr}.${timelapseExtension}`;
             linkTimelapse.textContent = `Yesterday's Timelapse`;
             linkTimelapse.style.display = 'inline-block';
+            
+            // Add high-resolution download button
+            let highResLink = listItem.querySelector('.link-download-highres');
+            if (!highResLink) {
+                highResLink = document.createElement('a');
+                highResLink.className = 'link-download-highres';
+                highResLink.textContent = "Download High-Resolution Timelapse";
+                highResLink.download = "";
+                linkTimelapse.parentNode.appendChild(highResLink);
+            }
+            
+            highResLink.href = `${photo_dir}/${yesterdayStr}/${yesterdayStr}_full.${frequentTimelapseExtension}`;
+            highResLink.style.display = 'inline-block';
 
+
+            
             linkHistory.href = `${photo_dir}/daylight.html`;
 
             if (camera.original_url) {
