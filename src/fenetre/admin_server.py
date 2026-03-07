@@ -14,6 +14,8 @@ from flask import (
     send_file,
     send_from_directory,
 )
+from flask_cors import CORS
+
 from PIL import Image, ImageOps
 from prometheus_client import REGISTRY, Counter, Gauge, generate_latest
 from werkzeug.exceptions import BadRequest
@@ -136,6 +138,7 @@ gopro_setting_gauge = Gauge(
 
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route("/api/timelapse_stats")
 def timelapse_stats():
