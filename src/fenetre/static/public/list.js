@@ -625,9 +625,17 @@ function updateHeaderStatus() {
     const header = document.querySelector('#list-header h1');
     const deployment = header.dataset.name || header.textContent;
 
-    header.innerHTML = `${deployment} (${total}) &bull; ${online} Online &bull; ${offline} Offline`;
+    const now = new Date();
+    const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
+    header.innerHTML =
+        `${deployment}<br>
+        📷 ${total} Cameras &nbsp;&nbsp;
+        🟢 ${online} Online &nbsp;&nbsp;
+        🔴 ${offline} Offline &nbsp;&nbsp;
+        🕒 Updated ${timeString}`;
 }
+
 
 
 function updateAllCameras() {
