@@ -616,25 +616,32 @@ function updateCamera(camera, cameraData) {
 
 let initialCameraExpanded = false;
 
-function updateHeaderStatus() {
-    const cameras = document.querySelectorAll('.camera-item');
-    const online = document.querySelectorAll('.camera-item .status.online').length;
-    const offline = document.querySelectorAll('.camera-item .status.offline').length;
-    const total = cameras.length;
+function updateHeaderStatus(data) {
 
-    const header = document.querySelector('#list-header h1');
-    const deployment = header.dataset.name || header.textContent;
+    const header = document.querySelector('#camera-title');
+    if (!header) return;
 
-    const now = new Date();
-    const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    let cameras = data.cameras || {};
+    let cameraCount = Object.keys(cameras).length;
+
+    let onlineCount = 0;
+    let offlineCount = 0;
+
+    Object.values(cameras).forEach(cam => {
+        if (cam.online) onlineCount++;
+        else offlineCount++;
+    });
+
+    const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
     header.innerHTML =
-    `${deployment}<br>
-    \uD83D\uDCF7 ${cameraCount} Cameras •
-    \uD83D\uDFE2 ${onlineCount} Online •
-    \uD83D\uDD34 ${offlineCount} Offline •
-    \uD83D\uDD52 Updated ${now}`;
+        `${data.global.deployment_name}<br>
+        \uD83D\uDCF7 ${cameraCount} Cameras •
+        \uD83D\uDFE2 ${onlineCount} Online •
+        \uD83D\uDD34 ${offlineCount} Offline •
+        \uD83D\uDD52 Updated ${now}`;
 }
+
 
 function loadTimelapseStats() {
     fetch('/api/timelapse_stats')
