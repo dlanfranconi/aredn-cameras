@@ -82,15 +82,19 @@ def create_timelapse(
             framerate = 30
         two_pass = False  # multi pass encoding not supported with hardware encoder
     else:
-        default_encoder_options = "-c:v libvpx-vp9 -b:v 5M"
+        # Use fast H.264 encoding instead of slow VP9
+        default_encoder_options = "-c:v libx264 -preset fast -crf 23 -threads 0 -movflags +faststart"
         max_width = 3840
         max_height = 2160
-        if two_pass is None:
-            two_pass = True  # VP9 can take advantage of multiple pass
+
+        # Disable two-pass because it slows encoding dramatically
+        two_pass = False
+
         if len(image_files) > 1200:
-            framerate = 60
+            framerate = 30
         else:
             framerate = 30
+
 
     aspect_ratio = width / height
     if aspect_ratio > 16 / 9:  # Wider
@@ -111,11 +115,8 @@ def create_timelapse(
             scale_vf = "scale=-2:720"
 
     if file_extension is None:
-        # search the ffmpeg_options string for vp9
-        if ffmpeg_options:
-            if "vp9" in ffmpeg_options:
-                file_extension = "webm"
         file_extension = "mp4"
+
 
     timelapse_filename = os.path.basename(dir) + "." + file_extension
     timelapse_filepath = os.path.join(dir, timelapse_filename)
@@ -161,28 +162,29 @@ def create_timelapse(
     if os.path.exists(tmp_timelapse_filepath):
         os.remove(tmp_timelapse_filepath)
 
+    # Create a file list for ffmpeg (much faster than glob)
+    file_list = os.path.join(tmp_dir, "images.txt")
+    with open(file_list, "w") as f:
+        for image in image_files:
+            f.write(f"file '{image}'\n")
+    
     ffmpeg_cmd = [
-        # Lower priority
         "nice",
         "-n10",
         "ffmpeg",
-        # FFMPEG Global options
         "-hide_banner",
         "-loglevel",
         "warning",
-        # FFMPEG Input options
-        "-framerate",
+        "-fflags",
+        "+genpts+discardcorrupt",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-r",
         str(framerate),
-        "-pattern_type",
-        "glob",
-        # FFMPEG Input
         "-i",
-        os.path.join(os.path.abspath(dir), "*.jpg"),
-        #        "-pix_fmt",
-        #        "yuv420p",
-        # FFMPEG Filters
-        "-vf",
-        f"{scale_vf},format=yuv420p",
+        file_list,
     ]
     if overwrite:
         ffmpeg_cmd.append("-y")
