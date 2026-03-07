@@ -562,12 +562,49 @@ function updateCamera(camera, cameraData) {
 
             
             linkHistory.href = `${photo_dir}/daylight.html`;
-
-            if (camera.original_url) {
-                originalUrlDiv.innerHTML = `Original URL: <a href="${camera.original_url}" target="_blank">${camera.original_url}</a>`;
-            } else {
-                originalUrlDiv.innerHTML = '';
+            
+            // Dropdown for downloading older timelapses
+            let timelapseSelect = listItem.querySelector('.timelapse-select');
+            
+            if (!timelapseSelect) {
+                timelapseSelect = document.createElement('select');
+                timelapseSelect.className = 'timelapse-select';
+                timelapseSelect.style.marginTop = '6px';
+            
+                const placeholder = document.createElement('option');
+                placeholder.textContent = "Download timelapse from date...";
+                placeholder.value = "";
+                timelapseSelect.appendChild(placeholder);
+            
+                timelapseSelect.addEventListener('change', function () {
+                    if (this.value !== "") {
+                        window.location.href = this.value;
+                    }
+                });
+            
+                linkHistory.parentNode.appendChild(timelapseSelect);
             }
+            
+            // Populate dropdown with last 30 days
+            timelapseSelect.innerHTML = '<option value="">Download timelapse from date...</option>';
+            
+            for (let i = 1; i <= 30; i++) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+            
+                const dateStr = d.toISOString().slice(0,10);
+            
+                const option = document.createElement('option');
+                option.textContent = dateStr;
+                option.value = `${photo_dir}/${dateStr}/${dateStr}.${timelapseExtension}`;
+            
+                timelapseSelect.appendChild(option);
+            }
+
+            
+            // Hide original camera URL
+            originalUrlDiv.innerHTML = '';
+
         })
         .catch(error => {
             lastPictureTime.textContent = 'Error loading metadata';
