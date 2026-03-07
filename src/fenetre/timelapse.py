@@ -83,7 +83,7 @@ def create_timelapse(
         two_pass = False  # multi pass encoding not supported with hardware encoder
     else:
         # Use fast H.264 encoding instead of slow VP9
-        default_encoder_options = "-c:v libx264 -preset fast -crf 23 -threads 0 -movflags +faststart"
+        default_encoder_options = "-c:v libx264 -preset fast -crf 28 -threads 0 -movflags +faststart"
         max_width = 3840
         max_height = 2160
 
@@ -94,28 +94,16 @@ def create_timelapse(
             framerate = 30
         else:
             framerate = 30
-
-
+            
+    # Force timelapse resolution to 720p for smaller files
     aspect_ratio = width / height
-    if aspect_ratio > 16 / 9:  # Wider
-        if width >= max_width:
-            scale_vf = f"scale={max_width}:-2"
-        elif width >= 2560:
-            scale_vf = "scale=2560:-2"
-        else:
-            scale_vf = "scale=1920:-2"
-    else:  # Taller or 16:9
-        if height >= max_height:
-            scale_vf = f"scale=-2:{max_height}"
-        elif height >= 1440:
-            scale_vf = "scale=-2:1440"
-        elif height >= 1080:
-            scale_vf = "scale=-2:1080"
-        else:
-            scale_vf = "scale=-2:720"
-
-    if file_extension is None:
-        file_extension = "mp4"
+    if aspect_ratio > 1:
+        scale_vf = "scale=1280:-2"
+    else:
+        scale_vf = "scale=-2:720"
+    
+        if file_extension is None:
+            file_extension = "mp4"
 
 
     timelapse_filename = os.path.basename(dir) + "." + file_extension
@@ -248,7 +236,49 @@ def create_timelapse(
         ):
             logger.info(f"Moving {tmp_timelapse_filepath} to {timelapse_filepath}")
             shutil.move(tmp_timelapse_filepath, timelapse_filepath)
+    
+    # Create a high-quality archival timelapse as well
+    archive_filepath = os.path.join(dir, os.path.basename(dir) + "_full.mp4")
 
+    archive_cmd = [
+        "nice",
+        "-n10",
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "warning",
+        "-framerate",
+        str(framerate),
+        "-pattern_type",
+        "glob",
+        "-i",
+        os.path.join(os.path.abspath(dir), "*.jpg"),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "slow",
+        "-crf",
+        "20",
+        "-threads",
+        "0",
+        "-movflags",
+        "+faststart",
+        archive_filepath,
+    ]
+
+    logger.info(f"Creating archival timelapse: {' '.join(archive_cmd)}")
+
+    try:
+        subprocess.run(
+            archive_cmd,
+            cwd=tmp_dir,
+            check=True,
+            stdout=ffmpeg_log_stream,
+            stderr=ffmpeg_log_stream,
+        )
+    except Exception as e:
+        logger.warning(f"Archive timelapse failed: {e}")
+    
     if os.path.exists(timelapse_filepath) and os.path.getsize(timelapse_filepath) > 0:
         # Update cameras.json if timelapse was created successfully
         camera_name = os.path.basename(os.path.dirname(dir))
@@ -267,6 +297,55 @@ def create_timelapse(
                         json.dump(data, f, indent=4)
                         f.truncate()
                         break
+                        
+        # Generate yearly timelapse if enough daily timelapses exist
+        try:
+            parent_dir = os.path.dirname(dir)
+            year = os.path.basename(dir)[:4]
+    
+            daily_videos = sorted(
+                glob.glob(os.path.join(parent_dir, f"{year}-*/{year}-*.mp4"))
+            )
+    
+            if len(daily_videos) > 5:  # wait until several days exist
+                list_file = os.path.join(tmp_dir, f"{year}_timelapse_list.txt")
+    
+                with open(list_file, "w") as f:
+                    for video in daily_videos:
+                        f.write(f"file '{video}'\n")
+    
+                yearly_output = os.path.join(parent_dir, f"{year}-yearly.mp4")
+    
+                yearly_cmd = [
+                    "nice",
+                    "-n10",
+                    "ffmpeg",
+                    "-hide_banner",
+                    "-loglevel",
+                    "warning",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
+                    "-i",
+                    list_file,
+                    "-c",
+                    "copy",
+                    yearly_output,
+                ]
+    
+                logger.info(f"Creating yearly timelapse: {' '.join(yearly_cmd)}")
+    
+                subprocess.run(
+                    yearly_cmd,
+                    cwd=tmp_dir,
+                    check=True,
+                    stdout=ffmpeg_log_stream,
+                    stderr=ffmpeg_log_stream,
+                )
+    
+        except Exception as e:
+            logger.warning(f"Yearly timelapse generation skipped: {e}")
         return True
     return False
 
