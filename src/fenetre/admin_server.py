@@ -137,6 +137,30 @@ gopro_setting_gauge = Gauge(
 
 app = Flask(__name__)
 
+@app.route("/api/timelapse_stats")
+def timelapse_stats():
+    import os
+
+    base = "/srv/fenetre/data"
+
+    total_size = 0
+    file_count = 0
+
+    for root, dirs, files in os.walk(base):
+        for f in files:
+            if f.endswith((".mp4", ".webm")):
+                path = os.path.join(root, f)
+                try:
+                    total_size += os.path.getsize(path)
+                    file_count += 1
+                except:
+                    pass
+
+    return {
+        "total_size_bytes": total_size,
+        "file_count": file_count
+    }
+
 
 @app.route("/metrics")
 def metrics():
