@@ -629,11 +629,11 @@ function updateHeaderStatus() {
     const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
     header.innerHTML =
-        `${deployment}<br>
-        📷 ${total} Cameras &nbsp;&nbsp;
-        🟢 ${online} Online &nbsp;&nbsp;
-        🔴 ${offline} Offline &nbsp;&nbsp;
-        🕒 Updated ${timeString}`;
+    `${deployment}<br>
+    \uD83D\uDCF7 ${cameraCount} Cameras •
+    \uD83D\uDFE2 ${onlineCount} Online •
+    \uD83D\uDD34 ${offlineCount} Offline •
+    \uD83D\uDD52 Updated ${now}`;
 }
 
 function loadTimelapseStats() {
@@ -649,7 +649,10 @@ function loadTimelapseStats() {
             const header = document.querySelector('#list-header h1');
 
             header.innerHTML +=
-                `<br>💾 ${gb} GB Timelapse Storage &nbsp;&nbsp; 🎞 ${files} Timelapses`;
+                `<br>\uD83D\uDCBE ${gb} GB Timelapse Storage • \uD83C\uDF9E ${files} Timelapses`;
+
+
+
         })
         .catch(err => console.error("Failed to load timelapse stats", err));
 }
