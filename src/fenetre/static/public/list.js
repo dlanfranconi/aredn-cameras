@@ -517,6 +517,7 @@ function updateCamera(camera, cameraData) {
                 lastPictureTime.textContent = `Last picture: ${imageDate.toLocaleString()}`;
                 const isOnline = (new Date() - imageDate) < 3 * 60 * 1000;
                 status.className = `status ${isOnline ? 'online' : 'offline'}`;
+                updateHeaderStatus();
             } else {
                 lastPictureTime.textContent = 'Could not parse date from: ' + filename;
                 status.className = 'status offline';
@@ -615,6 +616,19 @@ function updateCamera(camera, cameraData) {
 
 let initialCameraExpanded = false;
 
+function updateHeaderStatus() {
+    const cameras = document.querySelectorAll('.camera-item');
+    const online = document.querySelectorAll('.camera-item .status.online').length;
+    const offline = document.querySelectorAll('.camera-item .status.offline').length;
+    const total = cameras.length;
+
+    const header = document.querySelector('#list-header h1');
+    const deployment = header.dataset.name || header.textContent;
+
+    header.textContent = `${deployment} (${total}) • ${online} Online • ${offline} Offline`;
+}
+
+
 function updateAllCameras() {
     fetch('/cameras.json')
         .then(response => {
@@ -630,9 +644,9 @@ function updateAllCameras() {
                 cameraCount = Object.keys(data.cameras).length;
             }
             
-            document.querySelector('#list-header h1').textContent =
-                data.global.deployment_name + " Cameras (" + cameraCount + ")";
-
+            const header = document.querySelector('#list-header h1');
+            header.dataset.name = data.global.deployment_name + " Cameras";
+            header.textContent = `${data.global.deployment_name} Cameras (${cameraCount})`;
 
 
             // --- Icon Links Logic ---
