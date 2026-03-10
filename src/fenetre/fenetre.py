@@ -760,25 +760,25 @@ class FenetreHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def proxy_admin_api(self):
-    import urllib.request
-
-    admin_url = "http://127.0.0.1:8889" + self.path
-
-    try:
-        with urllib.request.urlopen(admin_url) as resp:
-            data = resp.read()
-
-            self.send_response(resp.status)
-
-            for header, value in resp.getheaders():
-                if header.lower() not in ["transfer-encoding", "connection"]:
-                    self.send_header(header, value)
-
-            self.end_headers()
-            self.wfile.write(data)
-
-    except Exception as e:
-        self.send_error(502, f"Admin API proxy failed: {e}")
+        import urllib.request
+    
+        admin_url = "http://127.0.0.1:8889" + self.path
+    
+        try:
+            with urllib.request.urlopen(admin_url) as resp:
+                data = resp.read()
+    
+                self.send_response(resp.status)
+    
+                for header, value in resp.getheaders():
+                    if header.lower() not in ["transfer-encoding", "connection"]:
+                        self.send_header(header, value)
+    
+                self.end_headers()
+                self.wfile.write(data)
+    
+        except Exception as e:
+            self.send_error(502, f"Admin API proxy failed: {e}")
 
     def end_headers(self):
         if server_config.get("allow_cors"):
