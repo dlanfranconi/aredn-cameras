@@ -36,7 +36,7 @@ pyexiv2
 piexif
 
 # Postprocessing
-# opencv-python-headless
+opencv-python-headless
 # siphash24
 # SSIM
 scikit-image
