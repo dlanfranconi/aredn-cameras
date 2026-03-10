@@ -4,6 +4,8 @@ import signal
 from datetime import datetime
 from io import BytesIO
 from onvif import ONVIFCamera
+import time
+import subprocess
 
 import requests
 import yaml
@@ -167,43 +169,95 @@ def ptz_preset():
 
     data = request.json
     camera_name = data.get("camera")
-    preset_token = data.get("preset")
+    preset = data.get("preset")
 
     config_file_path = app.config.get("FENETRE_CONFIG_FILE")
 
-    with open(config_file_path) as f:
-        config = yaml.safe_load(f)
+    (_, cameras_config, _, _, _) = config_load(config_file_path)
 
-    camera = config["cameras"].get(camera_name)
+    cam = cameras_config.get(camera_name)
 
-    if not camera or "ptz" not in camera:
-        return {"error": "Camera does not support PTZ"}, 400
+    if not cam:
+        return {"error":"camera not found"},404
 
-    ptz_conf = camera["ptz"]
+    ptz = cam.get("ptz")
 
-    ip = ptz_conf["ip"]
-    username = ptz_conf["username"]
-    password = ptz_conf["password"]
+    if not ptz:
+        return {"error":"ptz not enabled"},400
 
-    try:
-        cam = ONVIFCamera(ip, 80, username, password)
+    cam_obj = ONVIFCamera(
+        ptz["host"],
+        ptz.get("port",80),
+        ptz["username"],
+        ptz["password"]
+    )
 
-        media = cam.create_media_service()
-        ptz = cam.create_ptz_service()
+    media = cam_obj.create_media_service()
+    ptz_service = cam_obj.create_ptz_service()
 
-        profiles = media.GetProfiles()
-        profile = profiles[0]
+    profile = media.GetProfiles()[0]
 
-        request_obj = ptz.create_type('GotoPreset')
-        request_obj.ProfileToken = profile.token
-        request_obj.PresetToken = preset_token
+    request = ptz_service.create_type("GotoPreset")
+    request.ProfileToken = profile.token
+    request.PresetToken = preset
 
-        ptz.GotoPreset(request_obj)
+    ptz_service.GotoPreset(request)
 
-        return {"status": "ok"}
+    # wait for camera to move
+    time.sleep(2)
 
-    except Exception as e:
-        return {"status": "error", "message": str(e)}, 500
+    # trigger snapshot refresh
+    subprocess.Popen(["pkill","-USR1","fenetre"])
+
+    return {"status":"ok"}
+    
+@app.route("/api/ptz/presets/<camera>")
+def ptz_presets(camera):
+
+    config_file_path = app.config.get("FENETRE_CONFIG_FILE")
+
+    (_, cameras_config, _, _, _) = config_load(config_file_path)
+
+    cam = cameras_config.get(camera)
+
+    if not cam:
+        return {"error":"camera not found"},404
+
+    ptz = cam.get("ptz")
+
+    if not ptz:
+        return {"presets":[]}
+
+    cam_obj = ONVIFCamera(
+        ptz["host"],
+        ptz.get("port",80),
+        ptz["username"],
+        ptz["password"]
+    )
+
+    media = cam_obj.create_media_service()
+    ptz_service = cam_obj.create_ptz_service()
+
+    profile = media.GetProfiles()[0]
+
+    presets = ptz_service.GetPresets({'ProfileToken':profile.token})
+
+    result = []
+
+    for p in presets:
+
+        name = p.Name
+        token = p.token
+
+        if "presets" in ptz and token in ptz["presets"]:
+            name = ptz["presets"][token]
+
+        result.append({
+            "token": token,
+            "name": name
+        })
+
+    return {"presets":result}
 
 
 @app.route("/metrics")
