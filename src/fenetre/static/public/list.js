@@ -318,11 +318,11 @@ function createCameraListItem(camera) {
                 <div class="ptz-container"></div>
             </div>
         </div>
-    ;
+    `;
 
     const ptzContainer = listItem.querySelector(".ptz-container");
     
-    fetch(`/api/ptz/presets/${camera.title}`)
+    fetch(`/api/ptz/presets/${encodeURIComponent(camera.title)}`)
     .then(r=>r.json())
     .then(data=>{
     
