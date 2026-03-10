@@ -3,6 +3,7 @@ import os
 import signal
 from datetime import datetime
 from io import BytesIO
+from onvif import ONVIFCamera
 
 import requests
 import yaml
@@ -164,6 +165,33 @@ def timelapse_stats():
         "file_count": file_count
     }
 
+@app.route("/api/ptz/preset", methods=["POST"])
+def ptz_preset():
+    data = request.json
+
+    ip = data.get("ip")
+    username = data.get("username")
+    password = data.get("password")
+    preset = data.get("preset")
+
+    try:
+        cam = ONVIFCamera(ip, 80, username, password)
+        media = cam.create_media_service()
+        ptz = cam.create_ptz_service()
+
+        profiles = media.GetProfiles()
+        profile = profiles[0]
+
+        request = ptz.create_type('GotoPreset')
+        request.ProfileToken = profile.token
+        request.PresetToken = preset
+
+        ptz.GotoPreset(request)
+
+        return {"status": "ok"}
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
 
 @app.route("/metrics")
 def metrics():
