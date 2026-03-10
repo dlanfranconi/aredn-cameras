@@ -207,7 +207,7 @@ def ptz_preset():
     ptz_service.GotoPreset(request)
 
     # wait for camera to move
-    time.sleep(2)
+    time.sleep(3)
 
     # trigger snapshot refresh
     subprocess.Popen(["pkill","-USR1","fenetre"])
