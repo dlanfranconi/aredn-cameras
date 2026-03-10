@@ -314,38 +314,38 @@ function createCameraListItem(camera) {
                 <a class="link-today" href="#" target="_blank">Today's Pictures</a>
                 <a class="link-timelapse-today" href="#" target="_blank">Today's Timelapse</a>
                 <a class="link-timelapse" href="#" target="_blank">Yesterday's Timelapse</a>
-                <a class="link-history" href="#" target="_blank">History</a>
-            
-                <select class="ptz-preset-select" data-camera="${camera.title}">
-                    <option value="">Move Camera Preset...</option>
-                </select>
+                <a class="link-history" href="#" target="_blank">History</a>          
+                <div class="ptz-container"></div>
             </div>
         </div>
     ;
 
-    const presetSelect = listItem.querySelector(".ptz-preset-select");
-
-    if (presetSelect) {
+    const ptzContainer = listItem.querySelector(".ptz-container");
     
-        fetch(`/api/ptz/presets/${camera.title}`)
-            .then(r => r.json())
-            .then(data => {
+    fetch(`/api/ptz/presets/${camera.title}`)
+    .then(r=>r.json())
+    .then(data=>{
     
-                if (!data.presets) return;
+        if(!data.presets || data.presets.length === 0) return;
     
-                data.presets.forEach(p => {
+        const select=document.createElement("select");
+        select.className="ptz-preset-select";
+        select.dataset.camera=camera.title;
     
-                    const opt = document.createElement("option");
-                    opt.value = p.token;
-                    opt.textContent = p.name;
+        const opt=document.createElement("option");
+        opt.value="";
+        opt.textContent="Move Camera Preset...";
+        select.appendChild(opt);
     
-                    presetSelect.appendChild(opt);
+        data.presets.forEach(p=>{
+            const o=document.createElement("option");
+            o.value=p.token;
+            o.textContent=p.name;
+            select.appendChild(o);
+        });
     
-                });
-    
-            });
-            .catch(err => console.error("Failed loading PTZ presets", err));
-    }
+        ptzContainer.appendChild(select);
+    });
 
     listItem.querySelector('.camera-header').addEventListener('click', () => {
         const details = listItem.querySelector('.camera-details');
