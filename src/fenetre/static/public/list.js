@@ -318,7 +318,7 @@ function createCameraListItem(camera) {
     
     fetch(`/api/ptz/presets/${encodeURIComponent(camera.title)}`)
     .then(r=>r.json())
-    .then(data=>{
+    .then(presets=>{
     
         if(!presets || presets.length === 0) return;
     
@@ -888,6 +888,32 @@ if (loginForm) {
     };
 }
 
+const ptzRequestBtn = document.getElementById("ptz-request-btn");
+
+if(ptzRequestBtn){
+
+    ptzRequestBtn.addEventListener("click", ()=>{
+
+        fetch("/api/ptz/request_control",{
+            method:"POST"
+        })
+        .then(r=>r.json())
+        .then(data=>{
+
+            if(data.status==="controller"){
+                alert("You now control PTZ for 30 seconds");
+            }
+
+            if(data.status==="queued"){
+                alert("Added to queue position "+data.position);
+            }
+
+        });
+
+    });
+
+}
+
 async function ptzMove(camera, direction) {
 
     if (!loggedIn) {
@@ -912,44 +938,38 @@ function updatePTZControls() {
 }
 
 /* ============================
-   LOAD CAMERA PRESETS
+   PTZ QUEUE STATUS
 ============================ */
 
-async function loadPresets(cameraName, container) {
+function updatePTZQueue(){
 
-    try {
+    fetch("/api/ptz/queue_status")
+    .then(r=>r.json())
+    .then(data=>{
 
-        const res = await fetch(`/api/ptz/presets/${cameraName}`);
+        const div=document.getElementById("ptz-queue");
+        if(!div) return;
 
-        if (!res.ok) return;
+        if(!data.controller){
 
-        const presets = await res.json();
+            div.innerHTML="PTZ available";
+            return;
 
-        if (!presets || presets.length === 0) return;
+        }
 
-        const presetDiv = document.createElement("div");
-        presetDiv.className = "preset-buttons";
+        let queueText="";
 
-        presets.forEach(p => {
+        if(data.queue.length>0){
+            queueText="Queue: "+data.queue.join(", ");
+        }
 
-            const btn = document.createElement("button");
-            btn.innerText = p.name;
+        div.innerHTML=
+            "Controller: "+data.controller+
+            " ("+data.time_remaining+"s remaining)<br>"+
+            queueText;
 
-            btn.onclick = () => {
-                fetch(`/api/ptz/goto/${cameraName}/${p.token}`,{
-                    method:"POST"
-                });
-            };
-
-            presetDiv.appendChild(btn);
-
-        });
-
-        container.appendChild(presetDiv);
-
-    } catch (e) {
-        console.error("Preset load failed", e);
-    }
-
+    })
+    .catch(()=>{});
 }
 
+setInterval(updatePTZQueue,2000);
