@@ -15,56 +15,6 @@ if (storedTheme === 'dark' || (storedTheme === null && prefersDarkMode)) {
 }
 syncThemeToggleIcon();
 
-// Add login support
-const loginBtn = document.getElementById("login-btn");
-const logoutBtn = document.getElementById("logout-btn");
-const loginModal = document.getElementById("login-modal");
-
-loginBtn?.addEventListener("click",()=>{
-    loginModal.style.display="block";
-});
-
-logoutBtn?.addEventListener("click",()=>{
-
-    fetch("/api/logout")
-    .then(()=>{
-        logoutBtn.style.display="none";
-        loginBtn.style.display="inline";
-    });
-
-});
-
-document.getElementById("login-submit")?.addEventListener("click",()=>{
-
-    const username=document.getElementById("login-user").value;
-    const password=document.getElementById("login-pass").value;
-
-    fetch("/api/login",{
-        method:"POST",
-        headers:{
-            "Content-Type":"application/json"
-        },
-        body:JSON.stringify({
-            username,
-            password
-        })
-    })
-    .then(r=>{
-
-        if(!r.ok){
-            alert("Login failed");
-            return;
-        }
-
-        loginModal.style.display="none";
-        loginBtn.style.display="none";
-        logoutBtn.style.display="inline";
-
-    });
-
-});
-
-
 // add onvif support
 document.addEventListener("change", function(e){
 
@@ -75,16 +25,9 @@ document.addEventListener("change", function(e){
 
     if(!preset) return;
 
-    fetch("/api/ptz/preset",{
+    fetch(`/api/ptz/goto/${camera}/${preset}`,{
         method:"POST",
-        credentials:"include",
-        headers:{
-            "Content-Type":"application/json"
-        },
-        body:JSON.stringify({
-            camera: camera,
-            preset: preset
-        })
+        credentials:"include"
     });
 
 });
@@ -377,7 +320,7 @@ function createCameraListItem(camera) {
     .then(r=>r.json())
     .then(data=>{
     
-        if(!data.presets || data.presets.length === 0) return;
+        if(!presets || presets.length === 0) return;
     
         const select=document.createElement("select");
         select.className="ptz-preset-select";
@@ -388,7 +331,7 @@ function createCameraListItem(camera) {
         opt.textContent="Move Camera Preset...";
         select.appendChild(opt);
     
-        data.presets.forEach(p=>{
+        presets.forEach(p=>{
             const o=document.createElement("option");
             o.value=p.token;
             o.textContent=p.name;
@@ -397,20 +340,6 @@ function createCameraListItem(camera) {
     
         ptzContainer.appendChild(select);
     });
-
-    async function ptzMove(camera, direction) {
-
-    if (!loggedIn) {
-        alert("Login required for PTZ control");
-        return;
-    }
-
-    await fetch(`/api/ptz/move/${camera}/${direction}`,{
-        method:"POST"
-    });
-
-}
-
     
     listItem.querySelector('.camera-header').addEventListener('click', () => {
         const details = listItem.querySelector('.camera-details');
