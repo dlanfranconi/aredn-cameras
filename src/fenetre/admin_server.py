@@ -195,6 +195,36 @@ def process_ptz_queue():
 # start queue manager
 threading.Thread(target=process_ptz_queue, daemon=True).start()
 
+@app.route("/api/ptz/request_control", methods=["POST"])
+def request_ptz_control():
+
+    user = session.get("user")
+
+    if not user:
+        return {"error":"login required"},401
+
+    global CURRENT_CONTROLLER, CONTROL_START_TIME
+
+    with QUEUE_LOCK:
+
+        if CURRENT_CONTROLLER is None:
+            CURRENT_CONTROLLER = user
+            CONTROL_START_TIME = time.time()
+
+            return {
+                "status":"controller"
+            }
+
+        if user not in PTZ_QUEUE:
+            PTZ_QUEUE.append(user)
+
+        position = list(PTZ_QUEUE).index(user) + 1
+
+        return {
+            "status":"queued",
+            "position":position
+        }
+
 @app.route("/api/timelapse_stats")
 def timelapse_stats():
     import os
