@@ -238,34 +238,40 @@ def get_pic_from_url(
     # RTSP STREAM SUPPORT (FFMPEG)
     # -------------------------
     if url.startswith("rtsp://"):
-    
-        cap = cv2.VideoCapture(url)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
-        if not cap.isOpened():
-            raise RuntimeError(f"Could not open RTSP stream for {camera_name}")
+        import subprocess
+        import io
+        from PIL import Image
     
-        frame = None
-        start = time.time()
+        cmd = [
+            "ffmpeg",
+            "-rtsp_transport", "tcp",
+            "-stimeout", "5000000",
+            "-rtsp_transport", "tcp",
+            "-i", url,
+            "-fflags", "nobuffer",
+            "-flags", "low_delay",
+            "-frames:v", "1",
+            "-f", "image2pipe",
+            "-vcodec", "mjpeg",
+            "-"
+        ]
     
-        # give stream up to 3 seconds to produce a frame
-        while time.time() - start < 3:
-            ret, frame = cap.read()
-            if ret:
-                break
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
     
-        cap.release()
+        frame = proc.stdout.read()
     
-        if frame is None:
+        proc.kill()
+    
+        if not frame:
             raise RuntimeError(f"No frame received from RTSP camera {camera_name}")
     
-        # convert frame to jpeg
-        ret, buffer = cv2.imencode(".jpg", frame)
-    
-        if not ret:
-            raise RuntimeError(f"Failed to encode frame for {camera_name}")
-    
-        return BytesIO(buffer.tobytes())
+        img = Image.open(io.BytesIO(frame))
+        return img
 
 
     # -------------------------
