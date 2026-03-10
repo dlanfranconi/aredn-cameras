@@ -398,6 +398,20 @@ function createCameraListItem(camera) {
         ptzContainer.appendChild(select);
     });
 
+    async function ptzMove(camera, direction) {
+
+    if (!loggedIn) {
+        alert("Login required for PTZ control");
+        return;
+    }
+
+    await fetch(`/api/ptz/move/${camera}/${direction}`,{
+        method:"POST"
+    });
+
+}
+
+    
     listItem.querySelector('.camera-header').addEventListener('click', () => {
         const details = listItem.querySelector('.camera-details');
         const isActive = details.classList.toggle('active');
@@ -892,3 +906,121 @@ function updateAllCameras() {
 updateAllCameras();
 setInterval(updateAllCameras, 60000); // Refresh every 60 seconds
 loadTimelapseStats();
+
+/* ============================
+   AUTHENTICATION
+============================ */
+
+let loggedIn = false;
+
+const loginBtn = document.getElementById("login-btn");
+const logoutBtn = document.getElementById("logout-btn");
+const loginModal = document.getElementById("login-modal");
+const loginForm = document.getElementById("login-form");
+
+if (loginBtn) {
+    loginBtn.onclick = () => {
+        loginModal.style.display = "block";
+    };
+}
+
+if (logoutBtn) {
+    logoutBtn.onclick = async () => {
+        await fetch("/api/logout", { method: "POST" });
+        loggedIn = false;
+        logoutBtn.style.display = "none";
+        loginBtn.style.display = "inline-block";
+        updatePTZControls();
+    };
+}
+
+if (loginForm) {
+    loginForm.onsubmit = async (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById("login-user").value;
+        const password = document.getElementById("login-pass").value;
+
+        const res = await fetch("/api/login", {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({username,password})
+        });
+
+        if (res.ok) {
+            loggedIn = true;
+            loginModal.style.display = "none";
+            loginBtn.style.display = "none";
+            logoutBtn.style.display = "inline-block";
+            updatePTZControls();
+        } else {
+            alert("Login failed");
+        }
+    };
+}
+
+async function ptzMove(camera, direction) {
+
+    if (!loggedIn) {
+        alert("Login required for PTZ control");
+        return;
+    }
+
+    await fetch(`/api/ptz/move/${camera}/${direction}`,{
+        method:"POST"
+    });
+
+}
+
+/* ============================
+   PTZ CONTROLS
+============================ */
+
+function updatePTZControls() {
+    document.querySelectorAll(".ptz-arrows").forEach(el=>{
+        el.style.display = loggedIn ? "block" : "none";
+    });
+}
+
+/* ============================
+   LOAD CAMERA PRESETS
+============================ */
+
+async function loadPresets(cameraName, container) {
+
+    try {
+
+        const res = await fetch(`/api/ptz/presets/${cameraName}`);
+
+        if (!res.ok) return;
+
+        const presets = await res.json();
+
+        if (!presets || presets.length === 0) return;
+
+        const presetDiv = document.createElement("div");
+        presetDiv.className = "preset-buttons";
+
+        presets.forEach(p => {
+
+            const btn = document.createElement("button");
+            btn.innerText = p.name;
+
+            btn.onclick = () => {
+                fetch(`/api/ptz/goto/${cameraName}/${p.token}`,{
+                    method:"POST"
+                });
+            };
+
+            presetDiv.appendChild(btn);
+
+        });
+
+        container.appendChild(presetDiv);
+
+    } catch (e) {
+        console.error("Preset load failed", e);
+    }
+
+}
+
