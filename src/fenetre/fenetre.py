@@ -15,6 +15,7 @@ from threading import Thread
 from typing import Callable, Dict, List, Optional, Tuple
 import subprocess
 import tempfile
+import cv2
 
 import mozjpeg_lossless_optimization
 import pytz
