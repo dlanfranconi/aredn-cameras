@@ -13,6 +13,7 @@ from flask import (
     Flask,
     Response,
     jsonify,
+    redirect,
     request,
     send_file,
     send_from_directory,
@@ -138,6 +139,12 @@ gopro_state_gauge = Gauge("gopro_state", "GoPro State", ["camera_name", "state_n
 gopro_setting_gauge = Gauge(
     "gopro_setting", "GoPro Setting", ["camera_name", "setting_name"]
 )
+
+# User list for PTZ access and control
+USERS = {
+    "admin": "SLOAREDNcq805!!"
+}
+
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FENETRE_SECRET", "SLOAREDNcq805!!")
