@@ -320,6 +320,18 @@ function createCameraListItem(camera) {
                 <select class="ptz-preset-select" data-camera="${camera.title}">
                     <option value="">Move Camera Preset...</option>
                 </select>
+                const presetSelect = listItem.querySelector(".ptz-preset-select");
+
+                fetch(`/api/ptz/presets/${camera.title}`)
+                .then(r=>r.json())
+                .then(data=>{
+                    data.presets.forEach(p=>{
+                        const opt=document.createElement("option")
+                        opt.value=p.token
+                        opt.textContent=p.name
+                        presetSelect.appendChild(opt)
+                    })
+                })
             </div>
         </div>
     `;
