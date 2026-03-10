@@ -84,9 +84,12 @@ def timelapse_enabled_for_camera(camera_name: str) -> bool:
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
-        for cam in config.get("cameras", []):
-            if cam.get("title") == camera_name:
-                return cam.get("generate_timelapse", True)
+        cameras = config.get("cameras", {})
+        
+        cam = cameras.get(camera_name)
+        
+        if cam:
+            return cam.get("generate_timelapse", True)
 
     except Exception as e:
         logger.warning(f"Could not read timelapse config: {e}")
