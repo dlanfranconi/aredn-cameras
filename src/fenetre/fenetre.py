@@ -752,12 +752,12 @@ def get_ssim_for_area(
 class FenetreHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
 
-    # Proxy API requests to admin server
-    if self.path.startswith("/api/"):
-        self.proxy_admin_api()
-        return
-
-    super().do_GET()
+        # Proxy API requests to admin server
+        if self.path.startswith("/api/"):
+            self.proxy_admin_api()
+            return
+    
+        super().do_GET()
 
     def proxy_admin_api(self):
     import urllib.request
