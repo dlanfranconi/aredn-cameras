@@ -6,6 +6,7 @@ logzero
 numpy
 cairosvg
 flask-cors
+onvif-zeep
 # python-daemon
 
 ## Optional
