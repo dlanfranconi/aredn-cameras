@@ -216,13 +216,6 @@ def start_rtsp_frame_grabber(camera_name: str, url: str):
     with open(pid_file, "w") as f:
         f.write(str(proc.pid))
 
-    
-    subprocess.Popen(
-        cmd,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-
     return output_file
 
 
