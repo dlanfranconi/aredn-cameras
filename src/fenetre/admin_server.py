@@ -7,6 +7,7 @@ from onvif import ONVIFCamera
 import time
 import subprocess
 import threading
+import cv2
 
 from collections import deque
 
