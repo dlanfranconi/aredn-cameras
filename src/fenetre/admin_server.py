@@ -316,7 +316,14 @@ def ptz_preset():
     threading.Thread(target=refresh_snapshot).start()
 
     # trigger snapshot refresh
-    subprocess.Popen(["pkill","-USR1","fenetre"])
+    # trigger snapshot refresh safely
+    pid_file = app.config.get("FENETRE_PID_FILE_PATH")
+    
+    if pid_file and os.path.exists(pid_file):
+        with open(pid_file) as f:
+            pid = int(f.read().strip())
+            os.kill(pid, signal.SIGUSR1)
+
 
     return {"status":"ok"}
     
