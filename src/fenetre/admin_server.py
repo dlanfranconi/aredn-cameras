@@ -182,6 +182,9 @@ def ptz_preset():
 
     ptz = cam.get("ptz")
 
+    if "user" not in session:
+        return {"error":"login required"},403
+    
     if not ptz:
         return {"error":"ptz not enabled"},400
 
