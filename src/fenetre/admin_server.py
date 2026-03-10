@@ -16,6 +16,7 @@ from flask import (
     request,
     send_file,
     send_from_directory,
+    session
 )
 
 from PIL import Image, ImageOps
@@ -139,6 +140,7 @@ gopro_setting_gauge = Gauge(
 )
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("FENETRE_SECRET", "SLOAREDNcq805!!")
 
 @app.route("/api/timelapse_stats")
 def timelapse_stats():
