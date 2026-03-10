@@ -91,6 +91,7 @@ from waitress import serve as waitress_serve
 
 RTSP_FRAME_CACHE = {}
 RTSP_CACHE_LOCK = threading.Lock()
+RTSP_CACHE_STARTED = set()
 
 RTSP_CACHE_DIR = "/tmp/fenetre_rtsp_cache"
 os.makedirs(RTSP_CACHE_DIR, exist_ok=True)
@@ -221,7 +222,48 @@ def start_rtsp_frame_grabber(camera_name: str, url: str):
         f.write(str(proc.pid))
 
     return output_file
+def rtsp_cache_worker(camera_name, url):
 
+    import subprocess
+    import io
+    from PIL import Image
+
+    while True:
+        try:
+
+            cmd = [
+                "ffmpeg",
+                "-rtsp_transport", "tcp",
+                "-stimeout", "5000000",
+                "-rtsp_transport", "tcp",
+                "-i", url,
+                "-fflags", "nobuffer",
+                "-flags", "low_delay",
+                "-frames:v", "1",
+                "-f", "image2pipe",
+                "-vcodec", "mjpeg",
+                "-"
+            ]
+
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL
+            )
+
+            frame = proc.stdout.read()
+            proc.kill()
+
+            if frame:
+                img = Image.open(io.BytesIO(frame))
+
+                with RTSP_CACHE_LOCK:
+                    RTSP_FRAME_CACHE[camera_name] = img
+
+        except Exception as e:
+            print(f"RTSP cache error for {camera_name}: {e}")
+
+        time.sleep(5)
 
 def get_pic_from_url(
     url: str,
@@ -241,41 +283,14 @@ def get_pic_from_url(
     # RTSP STREAM SUPPORT (FFMPEG)
     # -------------------------
     if url.startswith("rtsp://"):
-
-        import subprocess
-        import io
-        from PIL import Image
     
-        cmd = [
-            "ffmpeg",
-            "-rtsp_transport", "tcp",
-            "-stimeout", "5000000",
-            "-rtsp_transport", "tcp",
-            "-i", url,
-            "-fflags", "nobuffer",
-            "-flags", "low_delay",
-            "-frames:v", "1",
-            "-f", "image2pipe",
-            "-vcodec", "mjpeg",
-            "-"
-        ]
+        with RTSP_CACHE_LOCK:
+            img = RTSP_FRAME_CACHE.get(camera_name)
     
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL
-        )
+        if img is None:
+            raise RuntimeError(f"No cached frame available for {camera_name}")
     
-        frame = proc.stdout.read()
-    
-        proc.kill()
-    
-        if not frame:
-            raise RuntimeError(f"No frame received from RTSP camera {camera_name}")
-    
-        img = Image.open(io.BytesIO(frame))
-        return img
-
+        return img.copy()
 
     # -------------------------
     # NORMAL HTTP SNAPSHOT
@@ -324,7 +339,7 @@ def get_pic_from_url(
         )
 
     return Image.open(BytesIO(r.content))
-
+    return img
 
 
 def get_pic_dir_and_filename(camera_name: str) -> Tuple[str, str]:
@@ -477,47 +492,6 @@ def is_sunrise_or_sunset(camera_config: Dict, global_config: Dict) -> bool:
     except Exception as e:
         logger.error(f"Error calculating sunrise/sunset: {e}")
         return False
-        
-def rtsp_cache_worker(camera_name, url):
-
-    import subprocess
-    import io
-    from PIL import Image
-
-    while True:
-        try:
-
-            cmd = [
-                "ffmpeg",
-                "-rtsp_transport", "tcp",
-                "-fflags", "nobuffer",
-                "-flags", "low_delay",
-                "-i", url,
-                "-frames:v", "1",
-                "-f", "image2pipe",
-                "-vcodec", "mjpeg",
-                "-"
-            ]
-
-            proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL
-            )
-
-            frame = proc.stdout.read()
-            proc.kill()
-
-            if frame:
-                img = Image.open(io.BytesIO(frame))
-
-                with RTSP_CACHE_LOCK:
-                    RTSP_FRAME_CACHE[camera_name] = img
-
-        except Exception as e:
-            print(f"RTSP cache error for {camera_name}: {e}")
-
-        time.sleep(2)
 
 def snap(camera_name, camera_config: Dict):
     def clear_camera_gauges():
@@ -560,6 +534,17 @@ def snap(camera_name, camera_config: Dict):
 
         # Capture picture from a URL. Useful for public cams or CCTV
         url = camera_config.get("url")
+        # Start RTSP cache worker once
+        if url.startswith("rtsp://") and camera_name not in RTSP_CACHE_STARTED:
+            RTSP_CACHE_STARTED.add(camera_name)
+        
+            threading.Thread(
+                target=rtsp_cache_worker,
+                args=(camera_name, url),
+                daemon=True,
+                name=f"{camera_name}_rtsp_cache"
+            ).start()
+
         timeout = camera_config.get("timeout_s")
         if url is not None:
             ua = global_config.get("user_agent", "")
