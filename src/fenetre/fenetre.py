@@ -89,6 +89,9 @@ import json
 import numpy as np
 from waitress import serve as waitress_serve
 
+RTSP_FRAME_CACHE = {}
+RTSP_CACHE_LOCK = threading.Lock()
+
 RTSP_CACHE_DIR = "/tmp/fenetre_rtsp_cache"
 os.makedirs(RTSP_CACHE_DIR, exist_ok=True)
 
@@ -474,7 +477,47 @@ def is_sunrise_or_sunset(camera_config: Dict, global_config: Dict) -> bool:
     except Exception as e:
         logger.error(f"Error calculating sunrise/sunset: {e}")
         return False
+        
+def rtsp_cache_worker(camera_name, url):
 
+    import subprocess
+    import io
+    from PIL import Image
+
+    while True:
+        try:
+
+            cmd = [
+                "ffmpeg",
+                "-rtsp_transport", "tcp",
+                "-fflags", "nobuffer",
+                "-flags", "low_delay",
+                "-i", url,
+                "-frames:v", "1",
+                "-f", "image2pipe",
+                "-vcodec", "mjpeg",
+                "-"
+            ]
+
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL
+            )
+
+            frame = proc.stdout.read()
+            proc.kill()
+
+            if frame:
+                img = Image.open(io.BytesIO(frame))
+
+                with RTSP_CACHE_LOCK:
+                    RTSP_FRAME_CACHE[camera_name] = img
+
+        except Exception as e:
+            print(f"RTSP cache error for {camera_name}: {e}")
+
+        time.sleep(2)
 
 def snap(camera_name, camera_config: Dict):
     def clear_camera_gauges():
@@ -566,7 +609,7 @@ def snap(camera_name, camera_config: Dict):
     try:
         previous_pic = capture(mode=previous_mode)
     except Exception as e:
-        print(f"Capture failed for {camera_name}: {e}")
+        print(f"[WATCHDOG] Capture failed for {camera_name}: {e}")
         metric_capture_failures_total.labels(camera_name).inc()
         time.sleep(5)
         return
@@ -676,13 +719,12 @@ def snap(camera_name, camera_config: Dict):
             )
 
         try:
-            new_pic = capture(current_mode)
+            new_pic = capture(mode=current_mode)
         except Exception as e:
-            error_msg = f"Could not fetch picture for {camera_name}: {e}"
-            logger.warning(error_msg)
-            log_camera_error(camera_name, error_msg, global_config)
-            metric_capture_failures_total.labels(camera_name=camera_name).inc()
-            raise
+            print(f"[WATCHDOG] Capture failed for {camera_name}: {e}")
+            metric_capture_failures_total.labels(camera_name).inc()
+            time.sleep(5)
+            return
         if new_pic is None:
             logger.error(f"{camera_name}: Could not fetch picture.")
             raise ValueError
