@@ -15,6 +15,30 @@ if (storedTheme === 'dark' || (storedTheme === null && prefersDarkMode)) {
 }
 syncThemeToggleIcon();
 
+// add onvif support
+document.addEventListener("change", function(e){
+
+    if(!e.target.classList.contains("ptz-preset-select")) return;
+
+    const camera = e.target.dataset.camera;
+    const preset = e.target.value;
+
+    if(!preset) return;
+
+    fetch("http://192.168.10.40:8889/api/ptz/preset",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+            camera: camera,
+            preset: preset
+        })
+    });
+
+});
+
+
 // Toggle theme on button click
 themeToggle.addEventListener('click', () => {
     body.classList.toggle('dark-mode');
@@ -292,6 +316,10 @@ function createCameraListItem(camera) {
                 <a class="link-timelapse-today" href="#" target="_blank">Today's Timelapse</a>
                 <a class="link-timelapse" href="#" target="_blank">Yesterday's Timelapse</a>
                 <a class="link-history" href="#" target="_blank">History</a>
+            
+                <select class="ptz-preset-select" data-camera="${camera.title}">
+                    <option value="">Move Camera Preset...</option>
+                </select>
             </div>
         </div>
     `;
@@ -606,6 +634,24 @@ function updateCamera(camera, cameraData) {
             // Hide original camera URL
             originalUrlDiv.innerHTML = '';
 
+            // PTZ Preset dropdown
+            const presetSelect = listItem.querySelector('.ptz-preset-select');
+            
+            if (presetSelect && camera.ptz_presets) {
+            
+                presetSelect.innerHTML = '<option value="">Move Camera Preset...</option>';
+            
+                camera.ptz_presets.forEach(preset => {
+            
+                    const option = document.createElement("option");
+                    option.value = preset.token;
+                    option.textContent = preset.name;
+            
+                    presetSelect.appendChild(option);
+                });
+            }
+
+            
         })
         .catch(error => {
             lastPictureTime.textContent = 'Error loading metadata';
