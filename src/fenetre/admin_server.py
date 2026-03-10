@@ -8,6 +8,8 @@ import time
 import subprocess
 import threading
 
+from collections import deque
+
 import requests
 import yaml
 from flask import (
@@ -146,6 +148,11 @@ USERS = {
     "admin": "SLOAREDNcq805!!"
 }
 
+PTZ_QUEUE = deque()
+CURRENT_CONTROLLER = None
+CONTROL_START_TIME = None
+CONTROL_TIMEOUT = 30  # seconds
+QUEUE_LOCK = threading.Lock()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FENETRE_SECRET", "SLOAREDNcq805!!")
@@ -167,7 +174,26 @@ def login():
 def logout():
     session.clear()
     return {"status":"logged_out"}
+def process_ptz_queue():
+    global CURRENT_CONTROLLER, CONTROL_START_TIME
 
+    while True:
+        with QUEUE_LOCK:
+            now = time.time()
+
+            if CURRENT_CONTROLLER:
+                if now - CONTROL_START_TIME > CONTROL_TIMEOUT:
+                    CURRENT_CONTROLLER = None
+                    CONTROL_START_TIME = None
+
+            if not CURRENT_CONTROLLER and PTZ_QUEUE:
+                CURRENT_CONTROLLER = PTZ_QUEUE.popleft()
+                CONTROL_START_TIME = now
+
+        time.sleep(1)
+        
+# start queue manager
+threading.Thread(target=process_ptz_queue, daemon=True).start()
 
 @app.route("/api/timelapse_stats")
 def timelapse_stats():
@@ -197,6 +223,29 @@ def timelapse_stats():
 def ptz_preset():
 
     data = request.json
+    user = session.get("user")
+    
+    if not user:
+        return {"error":"login required"},401
+    
+    with QUEUE_LOCK:
+    
+        global CURRENT_CONTROLLER, CONTROL_START_TIME
+    
+        if user != CURRENT_CONTROLLER:
+    
+            if user not in PTZ_QUEUE:
+                PTZ_QUEUE.append(user)
+    
+            position = list(PTZ_QUEUE).index(user) + 1
+    
+            return {
+                "status":"queued",
+                "position":position
+            }
+    
+        # reset timer when active user sends command
+        CONTROL_START_TIME = time.time()
     camera_name = data.get("camera")
     preset = data.get("preset")
 
@@ -287,6 +336,25 @@ def ptz_presets(camera):
         })
 
     return {"presets":result}
+
+@app.route("/api/ptz/queue_status")
+def ptz_queue_status():
+
+    with QUEUE_LOCK:
+
+        remaining = 0
+
+        if CURRENT_CONTROLLER:
+            remaining = max(
+                0,
+                CONTROL_TIMEOUT - int(time.time() - CONTROL_START_TIME)
+            )
+
+        return {
+            "controller": CURRENT_CONTROLLER,
+            "time_remaining": remaining,
+            "queue": list(PTZ_QUEUE)
+        }
 
 
 @app.route("/metrics")
