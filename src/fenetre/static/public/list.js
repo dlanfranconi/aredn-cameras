@@ -15,6 +15,56 @@ if (storedTheme === 'dark' || (storedTheme === null && prefersDarkMode)) {
 }
 syncThemeToggleIcon();
 
+// Add login support
+const loginBtn = document.getElementById("login-btn");
+const logoutBtn = document.getElementById("logout-btn");
+const loginModal = document.getElementById("login-modal");
+
+loginBtn?.addEventListener("click",()=>{
+    loginModal.style.display="block";
+});
+
+logoutBtn?.addEventListener("click",()=>{
+
+    fetch("/api/logout")
+    .then(()=>{
+        logoutBtn.style.display="none";
+        loginBtn.style.display="inline";
+    });
+
+});
+
+document.getElementById("login-submit")?.addEventListener("click",()=>{
+
+    const username=document.getElementById("login-user").value;
+    const password=document.getElementById("login-pass").value;
+
+    fetch("/api/login",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+            username,
+            password
+        })
+    })
+    .then(r=>{
+
+        if(!r.ok){
+            alert("Login failed");
+            return;
+        }
+
+        loginModal.style.display="none";
+        loginBtn.style.display="none";
+        logoutBtn.style.display="inline";
+
+    });
+
+});
+
+
 // add onvif support
 document.addEventListener("change", function(e){
 
@@ -27,6 +77,7 @@ document.addEventListener("change", function(e){
 
     fetch("/api/ptz/preset",{
         method:"POST",
+        credentials:"include",
         headers:{
             "Content-Type":"application/json"
         },
