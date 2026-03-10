@@ -149,6 +149,25 @@ USERS = {
 app = Flask(__name__)
 app.secret_key = os.environ.get("FENETRE_SECRET", "SLOAREDNcq805!!")
 
+@app.route("/api/login", methods=["POST"])
+def login():
+
+    data=request.json
+    user=data.get("username")
+    pw=data.get("password")
+
+    if USERS.get(user)==pw:
+        session["user"]=user
+        return {"status":"ok"}
+
+    return {"error":"invalid login"},403
+
+@app.route("/api/logout")
+def logout():
+    session.clear()
+    return {"status":"logged_out"}
+
+
 @app.route("/api/timelapse_stats")
 def timelapse_stats():
     import os
@@ -190,9 +209,6 @@ def ptz_preset():
         return {"error":"camera not found"},404
 
     ptz = cam.get("ptz")
-
-    if "user" not in session:
-        return {"error":"login required"},403
     
     if not ptz:
         return {"error":"ptz not enabled"},400
@@ -216,7 +232,7 @@ def ptz_preset():
     ptz_service.GotoPreset(request)
 
     # wait for camera to move
-    time.sleep(3)
+    threading.Thread(target=refresh_snapshot).start()
 
     # trigger snapshot refresh
     subprocess.Popen(["pkill","-USR1","fenetre"])
