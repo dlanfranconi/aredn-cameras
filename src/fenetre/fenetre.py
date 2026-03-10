@@ -236,17 +236,35 @@ def get_pic_from_url(
     # -------------------------
     # RTSP STREAM SUPPORT (FFMPEG)
     # -------------------------
-    if url.lower().startswith("rtsp://"):
-
-        cache_file = start_rtsp_frame_grabber(camera_name, url)
+    if url.startswith("rtsp://"):
     
-        # wait up to ~15 seconds for first frame
-        for _ in range(75):
-            if os.path.exists(cache_file) and os.path.getsize(cache_file) > 0:
-                return Image.open(cache_file)
-            time.sleep(0.2)
-        
-        raise RuntimeError(f"RTSP stream started but no frame received for {camera_name}")
+        cap = cv2.VideoCapture(url)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+        if not cap.isOpened():
+            raise RuntimeError(f"Could not open RTSP stream for {camera_name}")
+    
+        frame = None
+        start = time.time()
+    
+        # give stream up to 3 seconds to produce a frame
+        while time.time() - start < 3:
+            ret, frame = cap.read()
+            if ret:
+                break
+    
+        cap.release()
+    
+        if frame is None:
+            raise RuntimeError(f"No frame received from RTSP camera {camera_name}")
+    
+        # convert frame to jpeg
+        ret, buffer = cv2.imencode(".jpg", frame)
+    
+        if not ret:
+            raise RuntimeError(f"Failed to encode frame for {camera_name}")
+    
+        return BytesIO(buffer.tobytes())
 
 
     # -------------------------
@@ -541,10 +559,10 @@ def snap(camera_name, camera_config: Dict):
     try:
         previous_pic = capture(mode=previous_mode)
     except Exception as e:
-        error_msg = f"Failed to capture initial image for {camera_name}: {e}"
-        logger.error(error_msg, exc_info=True)
-        log_camera_error(camera_name, error_msg, global_config)
-        raise
+        print(f"Capture failed for {camera_name}: {e}")
+        metric_capture_failures_total.labels(camera_name).inc()
+        time.sleep(5)
+        return
     previous_exif_bytes = previous_pic.info.get("exif") or b""
     if len(camera_config.get("postprocessing", [])) > 0:
         previous_pic = postprocess(
