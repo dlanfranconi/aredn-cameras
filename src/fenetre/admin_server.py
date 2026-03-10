@@ -15,7 +15,6 @@ from flask import (
     send_file,
     send_from_directory,
 )
-from flask_cors import CORS
 
 from PIL import Image, ImageOps
 from prometheus_client import REGISTRY, Counter, Gauge, generate_latest
@@ -137,9 +136,7 @@ gopro_setting_gauge = Gauge(
     "gopro_setting", "GoPro Setting", ["camera_name", "setting_name"]
 )
 
-
 app = Flask(__name__)
-CORS(app)
 
 @app.route("/api/timelapse_stats")
 def timelapse_stats():
@@ -167,31 +164,47 @@ def timelapse_stats():
 
 @app.route("/api/ptz/preset", methods=["POST"])
 def ptz_preset():
-    data = request.json
 
-    ip = data.get("ip")
-    username = data.get("username")
-    password = data.get("password")
-    preset = data.get("preset")
+    data = request.json
+    camera_name = data.get("camera")
+    preset_token = data.get("preset")
+
+    config_file_path = app.config.get("FENETRE_CONFIG_FILE")
+
+    with open(config_file_path) as f:
+        config = yaml.safe_load(f)
+
+    camera = config["cameras"].get(camera_name)
+
+    if not camera or "ptz" not in camera:
+        return {"error": "Camera does not support PTZ"}, 400
+
+    ptz_conf = camera["ptz"]
+
+    ip = ptz_conf["ip"]
+    username = ptz_conf["username"]
+    password = ptz_conf["password"]
 
     try:
         cam = ONVIFCamera(ip, 80, username, password)
+
         media = cam.create_media_service()
         ptz = cam.create_ptz_service()
 
         profiles = media.GetProfiles()
         profile = profiles[0]
 
-        request = ptz.create_type('GotoPreset')
-        request.ProfileToken = profile.token
-        request.PresetToken = preset
+        request_obj = ptz.create_type('GotoPreset')
+        request_obj.ProfileToken = profile.token
+        request_obj.PresetToken = preset_token
 
-        ptz.GotoPreset(request)
+        ptz.GotoPreset(request_obj)
 
         return {"status": "ok"}
 
     except Exception as e:
         return {"status": "error", "message": str(e)}, 500
+
 
 @app.route("/metrics")
 def metrics():
