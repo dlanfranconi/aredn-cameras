@@ -338,21 +338,33 @@ function createCameraListItem(camera) {
                 <select class="ptz-preset-select" data-camera="${camera.title}">
                     <option value="">Move Camera Preset...</option>
                 </select>
-                const presetSelect = listItem.querySelector(".ptz-preset-select");
-
-                fetch(`/api/ptz/presets/${camera.title}`)
-                .then(r=>r.json())
-                .then(data=>{
-                    data.presets.forEach(p=>{
-                        const opt=document.createElement("option")
-                        opt.value=p.token
-                        opt.textContent=p.name
-                        presetSelect.appendChild(opt)
-                    })
-                })
             </div>
         </div>
-    `;
+    ;
+
+    const presetSelect = listItem.querySelector(".ptz-preset-select");
+
+    if (presetSelect) {
+    
+        fetch(`/api/ptz/presets/${camera.title}`)
+            .then(r => r.json())
+            .then(data => {
+    
+                if (!data.presets) return;
+    
+                data.presets.forEach(p => {
+    
+                    const opt = document.createElement("option");
+                    opt.value = p.token;
+                    opt.textContent = p.name;
+    
+                    presetSelect.appendChild(opt);
+    
+                });
+    
+            })
+            .catch(err => console.error("Failed loading PTZ presets", err));
+    }
 
     listItem.querySelector('.camera-header').addEventListener('click', () => {
         const details = listItem.querySelector('.camera-details');
