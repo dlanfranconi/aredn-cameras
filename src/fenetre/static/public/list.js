@@ -25,7 +25,7 @@ document.addEventListener("change", function(e){
 
     if(!preset) return;
 
-    fetch("http://192.168.10.40:8889/api/ptz/preset",{
+    fetch("/api/ptz/preset",{
         method:"POST",
         headers:{
             "Content-Type":"application/json"
