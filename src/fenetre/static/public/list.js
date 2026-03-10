@@ -38,6 +38,24 @@ document.addEventListener("change", function(e){
 
 });
 
+let startX,startY
+
+document.addEventListener("pointerdown",e=>{
+    startX=e.clientX
+    startY=e.clientY
+})
+
+document.addEventListener("pointerup",e=>{
+
+    let dx=e.clientX-startX
+    let dy=e.clientY-startY
+
+    fetch("/api/ptz/move",{
+        method:"POST",
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({dx,dy})
+    })
+})
 
 // Toggle theme on button click
 themeToggle.addEventListener('click', () => {
