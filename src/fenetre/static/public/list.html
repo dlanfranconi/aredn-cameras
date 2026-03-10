@@ -24,6 +24,11 @@
             </style>
             <div id="list-header">
                 <h1 id="camera-title">SLO County AREDN Cameras</h1>
+                <div id="auth-controls" style="position:absolute; top:10px; right:10px;">
+                    <button id="login-btn">Login</button>
+                    <button id="logout-btn" style="display:none;">Logout</button>
+                </div>
+
                 <div id="controls">
                     <a id="main-website-link" href="https://fenetre.cam" target="_blank" title="Fenetre.cam Project Website">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
@@ -72,5 +77,13 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
     <script src="list.js"></script>
+    <div id="login-modal" style="display:none; position:fixed; top:30%; left:50%; transform:translate(-50%,-50%); background:#222; padding:20px; border-radius:6px;">
+        <h3>Login</h3>
+    
+        <input id="login-user" placeholder="Username"><br><br>
+        <input id="login-pass" type="password" placeholder="Password"><br><br>
+    
+        <button id="login-submit">Login</button>
+    </div>  
 </body>
 </html>
