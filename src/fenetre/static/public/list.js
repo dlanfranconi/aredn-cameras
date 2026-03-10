@@ -1,10 +1,13 @@
-const themeToggle = document.getElementById('theme-toggle');
 const body = document.body;
+const themeToggle = document.getElementById('theme-toggle');
 const mapToggleButton = document.getElementById('map-toggle');
 
+
 function syncThemeToggleIcon() {
+    if (!themeToggle) return;
     themeToggle.classList.toggle('dark-mode-active', body.classList.contains('dark-mode'));
 }
+
 
 // Apply theme based on system preference or stored value
 const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -16,13 +19,16 @@ if (storedTheme === 'dark' || (storedTheme === null && prefersDarkMode)) {
 syncThemeToggleIcon();
 
 // Toggle theme on button click
-themeToggle.addEventListener('click', () => {
-    body.classList.toggle('dark-mode');
-    const theme = body.classList.contains('dark-mode') ? 'dark' : 'light';
-    localStorage.setItem('theme', theme);
-    syncThemeToggleIcon();
-    applyMapTheme(theme === 'dark');
-});
+if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+        body.classList.toggle('dark-mode');
+        const theme = body.classList.contains('dark-mode') ? 'dark' : 'light';
+        localStorage.setItem('theme', theme);
+        syncThemeToggleIcon();
+        applyMapTheme(theme === 'dark');
+    });
+}
+
 
 const cameraListElement = document.getElementById('camera-list');
 
