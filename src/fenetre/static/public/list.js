@@ -696,7 +696,7 @@ function updateHeaderStatus(data) {
 
 async function loadTimelapseStats() {
     try {
-        const res = await fetch("http://192.168.10.40:8889/api/timelapse_stats");
+        const res = await fetch("/api/timelapse_stats");
         const data = await res.json();
 
         const gb = (data.total_size_bytes / (1024**3)).toFixed(1);
