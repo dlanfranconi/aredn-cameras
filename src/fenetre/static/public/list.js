@@ -25,11 +25,17 @@ document.addEventListener("change", function(e){
 
     if(!preset) return;
 
-    fetch(`/api/ptz/goto/${camera}/${preset}`,{
+    fetch("/api/ptz/preset",{
         method:"POST",
-        credentials:"include"
+        credentials:"include",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body: JSON.stringify({
+            camera: camera,
+            preset: preset
+        })
     });
-
 });
 
 // Toggle theme on button click
@@ -318,9 +324,9 @@ function createCameraListItem(camera) {
     
     fetch(`/api/ptz/presets/${encodeURIComponent(camera.title)}`)
     .then(r=>r.json())
-    .then(presets=>{
+    .then(data=>{
     
-        if(!presets || presets.length === 0) return;
+        if(!data.presets || data.presets.length === 0) return;
     
         const select=document.createElement("select");
         select.className="ptz-preset-select";
@@ -331,7 +337,7 @@ function createCameraListItem(camera) {
         opt.textContent="Move Camera Preset...";
         select.appendChild(opt);
     
-        presets.forEach(p=>{
+        data.presets.forEach(p=>{
             const o=document.createElement("option");
             o.value=p.token;
             o.textContent=p.name;
