@@ -343,7 +343,7 @@ function createCameraListItem(camera) {
     
                 });
     
-            })
+            });
             .catch(err => console.error("Failed loading PTZ presets", err));
     }
 
